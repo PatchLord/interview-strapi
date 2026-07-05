@@ -37,6 +37,11 @@
       "type": "component",
       "repeatable": false,
       "component": "product.details"
+    },
+    "recommended": {
+      "type": "component",
+      "repeatable": true,
+      "component": "product.recommended"
     }
   }
 }

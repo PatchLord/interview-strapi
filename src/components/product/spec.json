@@ -1,0 +1,16 @@
+{
+  "collectionName": "components_product_specs",
+  "info": {
+    "displayName": "spec",
+    "description": "Deeper spec block (level 2) — scalar only"
+  },
+  "options": {},
+  "attributes": {
+    "warranty": {
+      "type": "string"
+    },
+    "weightGrams": {
+      "type": "integer"
+    }
+  }
+}

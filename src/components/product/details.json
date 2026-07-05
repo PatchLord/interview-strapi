@@ -2,7 +2,7 @@
   "collectionName": "components_product_details",
   "info": {
     "displayName": "details",
-    "description": "Product spec details with a brand relation"
+    "description": "Product spec details; nests a `spec` component (2 levels of components)"
   },
   "options": {},
   "attributes": {
@@ -12,10 +12,10 @@
     "material": {
       "type": "string"
     },
-    "brand": {
-      "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::brand.brand"
+    "spec": {
+      "type": "component",
+      "repeatable": false,
+      "component": "product.spec"
     }
   }
 }

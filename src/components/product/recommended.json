@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_product_recommended",
+  "info": {
+    "displayName": "recommended",
+    "description": "A recommended-products entry pointing at a collection"
+  },
+  "options": {},
+  "attributes": {
+    "label": {
+      "type": "string"
+    },
+    "collection": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::collection.collection"
+    }
+  }
+}
