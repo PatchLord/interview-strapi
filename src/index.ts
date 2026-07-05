@@ -1,8 +1,47 @@
 import type { Core } from '@strapi/strapi';
 
 /**
- * Grant the public role read access (find + findOne) to the content types
- * the candidate needs to query, so the API works with no auth token.
+ * Create a super-admin user once (idempotent) so whoever boots this (the
+ * candidate on their laptop, or the interviewer) can log into /admin and edit
+ * content live — needed to demonstrate the "real-time freshness" requirement.
+ * Overridable via SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD.
+ *
+ * Default login:  interviewer@local.dev  /  Interview@2026
+ */
+async function createAdminUser(strapi: Core.Strapi) {
+  const count = await strapi.db.query('admin::user').count();
+  if (count > 0) {
+    strapi.log.info('[seed] admin user already exists — skipping.');
+    return;
+  }
+
+  const superAdmin = await strapi.db
+    .query('admin::role')
+    .findOne({ where: { code: 'strapi-super-admin' } });
+
+  if (!superAdmin) {
+    strapi.log.warn('[seed] super-admin role not found yet — skipping admin creation.');
+    return;
+  }
+
+  const email = process.env.SEED_ADMIN_EMAIL || 'interviewer@local.dev';
+  const password = process.env.SEED_ADMIN_PASSWORD || 'Interview@2026';
+
+  await strapi.service('admin::user').create({
+    email,
+    firstname: 'Interviewer',
+    lastname: 'Admin',
+    password,
+    isActive: true,
+    roles: [superAdmin.id],
+  });
+
+  strapi.log.info(`[seed] admin user created → ${email}`);
+}
+
+/**
+ * Grant the public role read access (find + findOne) so a client service can
+ * read from Strapi with no token.
  */
 async function openPublicReadAccess(strapi: Core.Strapi) {
   const publicRole = await strapi.db
@@ -22,23 +61,23 @@ async function openPublicReadAccess(strapi: Core.Strapi) {
     const existing = await strapi.db
       .query('plugin::users-permissions.permission')
       .findOne({ where: { action, role: publicRole.id } });
-
     if (!existing) {
-      await strapi.db.query('plugin::users-permissions.permission').create({
-        data: { action, role: publicRole.id },
-      });
+      await strapi.db
+        .query('plugin::users-permissions.permission')
+        .create({ data: { action, role: publicRole.id } });
     }
   }
 }
 
 /**
- * Seed a small, relation-rich dataset once (idempotent — skips if products exist):
- *   - collections
- *   - products, each linked to one or more collections (many-to-many), plus:
- *       • details.spec  (a component nested inside a component — 2 levels deep,
- *         scalar only, no relation)
- *       • recommended[] → each entry's `collection` → collection  (repeatable
- *         component, each holding a relation to a collection)
+ * Seed a relation-rich dataset once (idempotent — skips if products exist):
+ *   - 6 collections
+ *   - 30 products (28 published + 2 draft/unpublished, to exercise the
+ *     published-only path), each wired through:
+ *       • collections (many-to-many)
+ *       • details.spec  (component nested inside a component — scalar)
+ *       • recommended[] → each entry's collection  (relation in a repeatable
+ *         component; the collection has its own products for the "cards")
  */
 async function seed(strapi: Core.Strapi) {
   const existing = await strapi.documents('api::product.product').count({});
@@ -54,54 +93,70 @@ async function seed(strapi: Core.Strapi) {
     { title: 'New Arrivals', handle: 'new-arrivals', description: 'Fresh stock.' },
     { title: 'Best Sellers', handle: 'best-sellers', description: 'Most popular items.' },
     { title: 'Clearance', handle: 'clearance', description: 'Final markdowns.' },
+    { title: 'Featured', handle: 'featured', description: 'Hand-picked highlights.' },
+    { title: 'Essentials', handle: 'essentials', description: 'Everyday staples.' },
   ];
-  const collections: Record<string, string> = {};
+  const colByHandle: Record<string, string> = {};
   for (const c of collectionDefs) {
     const doc = await strapi.documents('api::collection.collection').create({
       data: c,
       status: 'published',
     });
-    collections[c.handle] = doc.documentId;
+    colByHandle[c.handle] = doc.documentId;
   }
 
-  const productDefs = [
-    { title: 'Aurora Hoodie', price: 79.99, material: 'Organic cotton', weight: 640, cols: ['new-arrivals', 'best-sellers'], recommend: ['summer-sale', 'clearance'] },
-    { title: 'Nimbus Rain Jacket', price: 129.0, material: 'Recycled nylon', weight: 520, cols: ['new-arrivals'], recommend: ['best-sellers'] },
-    { title: 'Terra Sneakers', price: 99.5, material: 'Suede', weight: 780, cols: ['best-sellers', 'summer-sale'], recommend: ['new-arrivals', 'clearance'] },
-    { title: 'Solstice Tee', price: 24.99, material: 'Cotton', weight: 180, cols: ['summer-sale', 'clearance'], recommend: ['best-sellers'] },
-    { title: 'Vertex Backpack', price: 64.0, material: 'Ripstop', weight: 900, cols: ['best-sellers'], recommend: ['new-arrivals'] },
-    { title: 'Halcyon Shorts', price: 39.99, material: 'Linen blend', weight: 210, cols: ['summer-sale'], recommend: ['clearance', 'best-sellers'] },
-    { title: 'Onyx Beanie', price: 19.99, material: 'Merino wool', weight: 90, cols: ['clearance'], recommend: ['summer-sale'] },
-    { title: 'Pulse Running Socks', price: 12.5, material: 'Coolmax', weight: 60, cols: ['clearance', 'best-sellers'], recommend: ['new-arrivals'] },
+  const names = [
+    'Aurora Hoodie', 'Nimbus Rain Jacket', 'Terra Sneakers', 'Solstice Tee', 'Vertex Backpack',
+    'Halcyon Shorts', 'Onyx Beanie', 'Pulse Running Socks', 'Cobalt Windbreaker', 'Ember Flannel',
+    'Cirrus Cap', 'Slate Joggers', 'Marigold Dress', 'Basalt Boots', 'Fern Cardigan',
+    'Quartz Polo', 'Dune Sandals', 'Ridge Parka', 'Willow Skirt', 'Ion Tank',
+    'Cedar Sweater', 'Flint Gloves', 'Meadow Scarf', 'Harbor Chinos', 'Peak Vest',
+    'Lumen Leggings', 'Drift Swim Shorts', 'Grove Henley', 'Talon Trail Shoes', 'Aster Blouse',
   ];
+  const materials = ['Organic cotton', 'Recycled nylon', 'Suede', 'Merino wool', 'Linen blend', 'Ripstop', 'Cotton', 'Coolmax'];
+  const handles = collectionDefs.map((c) => c.handle);
 
-  for (const p of productDefs) {
+  const DRAFT_COUNT = 2; // last 2 are unpublished — exercise the published-only path
+
+  for (let i = 0; i < names.length; i++) {
+    const title = names[i];
+    const price = Math.round((12 + ((i * 7) % 180)) * 100) / 100 + 0.99;
+
+    const cols = new Set<string>([handles[i % handles.length]]);
+    if (i % 2 === 0) cols.add(handles[(i + 2) % handles.length]);
+    if (i % 3 === 0) cols.add(handles[(i + 4) % handles.length]);
+
+    const recs = new Set<string>([handles[(i + 1) % handles.length]]);
+    if (i % 2 === 1) recs.add(handles[(i + 3) % handles.length]);
+
+    const isDraft = i >= names.length - DRAFT_COUNT;
+
     await strapi.documents('api::product.product').create({
       data: {
-        title: p.title,
-        handle: p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
-        price: p.price,
-        description: `${p.title} — a quality product.`,
-        collections: { connect: p.cols.map((h) => collections[h]) },
+        title: isDraft ? `${title} (Draft)` : title,
+        handle: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+        price,
+        description: `${title} — a quality product.`,
+        collections: { connect: [...cols].map((h) => colByHandle[h]) },
         details: {
-          sku: `SKU-${p.title.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 8)}`,
-          material: p.material,
+          sku: `SKU-${title.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 8)}`,
+          material: materials[i % materials.length],
           spec: {
             warranty: '1 year',
-            weightGrams: p.weight,
+            weightGrams: 60 + ((i * 37) % 900),
           },
         },
-        recommended: p.recommend.map((h, i) => ({
-          label: `Because you liked this #${i + 1}`,
-          collection: collections[h],
+        recommended: [...recs].map((h, idx) => ({
+          label: `Because you liked this #${idx + 1}`,
+          collection: colByHandle[h],
         })),
       },
-      status: 'published',
+      status: isDraft ? 'draft' : 'published',
     });
   }
 
   strapi.log.info(
-    `[seed] done: ${collectionDefs.length} collections, ${productDefs.length} products.`
+    `[seed] done: ${collectionDefs.length} collections, ${names.length} products (${names.length - DRAFT_COUNT} published + ${DRAFT_COUNT} draft).`
   );
 }
 
@@ -109,6 +164,7 @@ export default {
   register(/* { strapi }: { strapi: Core.Strapi } */) {},
 
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
+    await createAdminUser(strapi);
     await openPublicReadAccess(strapi);
     await seed(strapi);
   },
