@@ -1,61 +1,34 @@
-# 🚀 Getting started with Strapi
+# interview-strapi
 
-Strapi comes with a full featured [Command Line Interface](https://docs.strapi.io/dev-docs/cli) (CLI) which lets you scaffold and manage your project in seconds.
+A small pre-built **Strapi 5** CMS used as the data source for a backend take-home task.
+It comes with the content model + sample data already defined — you just run it.
 
-### `develop`
+## Run it (≈2 minutes, no database to install)
 
-Start your Strapi application with autoReload enabled. [Learn more](https://docs.strapi.io/dev-docs/cli#strapi-develop)
-
-```
-npm run develop
-# or
-yarn develop
-```
-
-### `start`
-
-Start your Strapi application with autoReload disabled. [Learn more](https://docs.strapi.io/dev-docs/cli#strapi-start)
-
-```
-npm run start
-# or
-yarn start
+```bash
+bun install
+cp .env.example .env      # defaults to SQLite — nothing else to set up
+bun run develop
 ```
 
-### `build`
+Strapi starts at **http://localhost:1337**. On first boot it automatically:
+- creates the content types (product, collection + components),
+- seeds sample data (6 collections, 30 products — 28 published + 2 draft),
+- opens **public read** access (so you can call the API with no token),
+- creates an admin user so you can edit content in the panel.
 
-Build your admin panel. [Learn more](https://docs.strapi.io/dev-docs/cli#strapi-build)
+> Prefer npm/yarn/pnpm? Any works — replace `bun` accordingly.
 
-```
-npm run build
-# or
-yarn build
-```
+## Access
 
-## ⚙️ Deployment
+- **API (REST):** `http://localhost:1337/api/products` , `/api/collections`
+- **API (GraphQL):** `http://localhost:1337/graphql`
+- **Admin panel:** `http://localhost:1337/admin` — login **interviewer@local.dev** / **Interview@2026**
 
-Strapi gives you many possible deployment options for your project including [Strapi Cloud](https://cloud.strapi.io). Browse the [deployment section of the documentation](https://docs.strapi.io/dev-docs/deployment) to find the best solution for your use case.
+Relations & components are not returned unless you `populate` them (nested ones need deep populate) — see the task brief for an example.
 
-```
-yarn strapi deploy
-```
+## Content model (summary)
 
-## 📚 Learn more
-
-- [Resource center](https://strapi.io/resource-center) - Strapi resource center.
-- [Strapi documentation](https://docs.strapi.io) - Official Strapi documentation.
-- [Strapi tutorials](https://strapi.io/tutorials) - List of tutorials made by the core team and the community.
-- [Strapi blog](https://strapi.io/blog) - Official Strapi blog containing articles made by the Strapi team and the community.
-- [Changelog](https://strapi.io/changelog) - Find out about the Strapi product updates, new features and general improvements.
-
-Feel free to check out the [Strapi GitHub repository](https://github.com/strapi/strapi). Your feedback and contributions are welcome!
-
-## ✨ Community
-
-- [Discord](https://discord.strapi.io) - Come chat with the Strapi community including the core team.
-- [Forum](https://forum.strapi.io/) - Place to discuss, ask questions and find answers, show your Strapi project and get feedback or just talk with other Community members.
-- [Awesome Strapi](https://github.com/strapi/awesome-strapi) - A curated list of awesome things related to Strapi.
-
----
-
-<sub>🤫 Psst! [Strapi is hiring](https://strapi.io/careers).</sub>
+- `product` ⇄ `collection` — many-to-many
+- `product.details` → `spec` — a component nested inside a component (scalar)
+- `product.recommended[]` — a repeatable component, each entry with a relation to a `collection`
