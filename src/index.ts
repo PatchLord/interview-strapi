@@ -16,8 +16,6 @@ async function openPublicReadAccess(strapi: Core.Strapi) {
     'api::product.product.findOne',
     'api::collection.collection.find',
     'api::collection.collection.findOne',
-    'api::brand.brand.find',
-    'api::brand.brand.findOne',
   ];
 
   for (const action of actions) {
@@ -35,33 +33,21 @@ async function openPublicReadAccess(strapi: Core.Strapi) {
 
 /**
  * Seed a small, relation-rich dataset once (idempotent — skips if products exist):
- *   - brands
- *   - collections (many-to-many with products)
- *   - products, each embedding a `details` component whose `brand` relation
- *     points at a brand, and each linked to one or more collections.
+ *   - collections
+ *   - products, each linked to one or more collections (many-to-many), plus:
+ *       • details.spec  (a component nested inside a component — 2 levels deep,
+ *         scalar only, no relation)
+ *       • recommended[] → each entry's `collection` → collection  (repeatable
+ *         component, each holding a relation to a collection)
  */
 async function seed(strapi: Core.Strapi) {
-  const existing = await strapi.documents('api::product.product').count();
+  const existing = await strapi.documents('api::product.product').count({});
   if (existing > 0) {
     strapi.log.info(`[seed] ${existing} products already present — skipping seed.`);
     return;
   }
 
-  strapi.log.info('[seed] seeding brands, collections and products…');
-
-  const brandDefs = [
-    { name: 'Acme', handle: 'acme' },
-    { name: 'Zenith', handle: 'zenith' },
-    { name: 'Nova', handle: 'nova' },
-  ];
-  const brands: Record<string, string> = {};
-  for (const b of brandDefs) {
-    const doc = await strapi.documents('api::brand.brand').create({
-      data: b,
-      status: 'published',
-    });
-    brands[b.handle] = doc.documentId;
-  }
+  strapi.log.info('[seed] seeding collections and products…');
 
   const collectionDefs = [
     { title: 'Summer Sale', handle: 'summer-sale', description: 'Hot-weather deals.' },
@@ -79,14 +65,14 @@ async function seed(strapi: Core.Strapi) {
   }
 
   const productDefs = [
-    { title: 'Aurora Hoodie', price: 79.99, material: 'Organic cotton', brand: 'acme', cols: ['new-arrivals', 'best-sellers'] },
-    { title: 'Nimbus Rain Jacket', price: 129.0, material: 'Recycled nylon', brand: 'zenith', cols: ['new-arrivals'] },
-    { title: 'Terra Sneakers', price: 99.5, material: 'Suede', brand: 'nova', cols: ['best-sellers', 'summer-sale'] },
-    { title: 'Solstice Tee', price: 24.99, material: 'Cotton', brand: 'acme', cols: ['summer-sale', 'clearance'] },
-    { title: 'Vertex Backpack', price: 64.0, material: 'Ripstop', brand: 'zenith', cols: ['best-sellers'] },
-    { title: 'Halcyon Shorts', price: 39.99, material: 'Linen blend', brand: 'nova', cols: ['summer-sale'] },
-    { title: 'Onyx Beanie', price: 19.99, material: 'Merino wool', brand: 'acme', cols: ['clearance'] },
-    { title: 'Pulse Running Socks', price: 12.5, material: 'Coolmax', brand: 'nova', cols: ['clearance', 'best-sellers'] },
+    { title: 'Aurora Hoodie', price: 79.99, material: 'Organic cotton', weight: 640, cols: ['new-arrivals', 'best-sellers'], recommend: ['summer-sale', 'clearance'] },
+    { title: 'Nimbus Rain Jacket', price: 129.0, material: 'Recycled nylon', weight: 520, cols: ['new-arrivals'], recommend: ['best-sellers'] },
+    { title: 'Terra Sneakers', price: 99.5, material: 'Suede', weight: 780, cols: ['best-sellers', 'summer-sale'], recommend: ['new-arrivals', 'clearance'] },
+    { title: 'Solstice Tee', price: 24.99, material: 'Cotton', weight: 180, cols: ['summer-sale', 'clearance'], recommend: ['best-sellers'] },
+    { title: 'Vertex Backpack', price: 64.0, material: 'Ripstop', weight: 900, cols: ['best-sellers'], recommend: ['new-arrivals'] },
+    { title: 'Halcyon Shorts', price: 39.99, material: 'Linen blend', weight: 210, cols: ['summer-sale'], recommend: ['clearance', 'best-sellers'] },
+    { title: 'Onyx Beanie', price: 19.99, material: 'Merino wool', weight: 90, cols: ['clearance'], recommend: ['summer-sale'] },
+    { title: 'Pulse Running Socks', price: 12.5, material: 'Coolmax', weight: 60, cols: ['clearance', 'best-sellers'], recommend: ['new-arrivals'] },
   ];
 
   for (const p of productDefs) {
@@ -100,15 +86,22 @@ async function seed(strapi: Core.Strapi) {
         details: {
           sku: `SKU-${p.title.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 8)}`,
           material: p.material,
-          brand: { connect: [brands[p.brand]] },
+          spec: {
+            warranty: '1 year',
+            weightGrams: p.weight,
+          },
         },
+        recommended: p.recommend.map((h, i) => ({
+          label: `Because you liked this #${i + 1}`,
+          collection: collections[h],
+        })),
       },
       status: 'published',
     });
   }
 
   strapi.log.info(
-    `[seed] done: ${brandDefs.length} brands, ${collectionDefs.length} collections, ${productDefs.length} products.`
+    `[seed] done: ${collectionDefs.length} collections, ${productDefs.length} products.`
   );
 }
 
