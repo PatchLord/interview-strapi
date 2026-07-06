@@ -3,6 +3,8 @@
 A small pre-built **Strapi 5** CMS used as the data source for a backend take-home task.
 It comes with the content model + sample data already defined — you just run it.
 
+> 📋 **The task itself is in [TASK.md](./TASK.md).** This repo is only the data source — you build the API service in front of it.
+
 ## Run it (≈2 minutes, no database to install)
 
 ```bash
