@@ -35,7 +35,7 @@ A backend service (your own API layer that calls Strapi under the hood) exposing
 
 ## What we care about most — please read
 We care most about your **reasoning on making this fast *and* fresh at ~1000 req/s** — **prioritize being able to talk through that architecture over finishing every endpoint.** Specifically:
-- A **stubbed or described cache is completely fine** — you do **not** need a finished caching layer.
+- A **described or stubbed** approach to the fast-and-fresh part is completely fine — you don't need to fully build it; walking us through the approach counts.
 - You do **not** need to actually hit 1000 req/s live — treat it as a target to *reason about*.
 - If you run out of time, just tell us what you'd do next.
 
