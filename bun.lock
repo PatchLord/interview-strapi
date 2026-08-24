@@ -6,7 +6,7 @@
       "name": "interview-strapi",
       "dependencies": {
         "@strapi/plugin-cloud": "5.50.0",
-        "@strapi/plugin-graphql": "^5.50.0",
+        "@strapi/plugin-graphql": "5.50.0",
         "@strapi/plugin-users-permissions": "5.50.0",
         "@strapi/strapi": "5.50.0",
         "better-sqlite3": "12.8.0",
@@ -23,6 +23,10 @@
         "typescript": "^5",
       },
     },
+  },
+  "overrides": {
+    "@strapi/admin": "5.50.0",
+    "@strapi/content-manager": "5.50.0",
   },
   "packages": {
     "@ai-sdk/gateway": ["@ai-sdk/gateway@1.0.29", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.9" }, "peerDependencies": { "zod": "^3.25.76 || ^4" } }, "sha512-o9LtmBiG2WAgs3GAmL79F8idan/UupxHG8Tyr2gP4aUSOzflM0bsvfzozBp8x6WatQnOx+Pio7YNw45Y6I16iw=="],
