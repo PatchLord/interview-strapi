@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@strapi/plugin-cloud": "5.50.0",
-    "@strapi/plugin-graphql": "^5.50.0",
+    "@strapi/plugin-graphql": "5.50.0",
     "@strapi/plugin-users-permissions": "5.50.0",
     "@strapi/strapi": "5.50.0",
     "better-sqlite3": "12.8.0",
@@ -31,6 +31,10 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@strapi/admin": "5.50.0",
+    "@strapi/content-manager": "5.50.0"
   },
   "engines": {
     "node": ">=20.0.0 <=26.x.x",
